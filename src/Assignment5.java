@@ -1,9 +1,6 @@
 import java.io.FileNotFoundException;
 import java.io.FileReader;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Scanner;
+import java.util.*;
 
 public class Assignment5 {
     public static interface ValuePairFilter {
@@ -22,6 +19,11 @@ public class Assignment5 {
     }
 
     public static class CSP {
+
+        public static void main(String[] args) {
+            CSP csp = createSudokuCSP("resources/veryhard.txt");
+            printSudokuSolution(csp.backtrackingSearch());
+        }
         @SuppressWarnings("unchecked")
         private VariablesToDomainsMapping deepCopyAssignment(VariablesToDomainsMapping assignment) {
             VariablesToDomainsMapping copy = new VariablesToDomainsMapping();
@@ -192,8 +194,41 @@ public class Assignment5 {
          * that took place in previous iterations of the loop.
          */
         public VariablesToDomainsMapping backtrack(VariablesToDomainsMapping assignment) {
-            // TODO: IMPLEMENT THIS
-            return assignment;
+            String unassignedVariable = selectUnassignedVariable(assignment);
+            if (unassignedVariable.isEmpty()) return assignment;
+            ArrayList<String> domainValues = orderDomainValues(unassignedVariable, assignment);
+            for (int i = 0; i<domainValues.size(); i++) {
+                VariablesToDomainsMapping assignmentCopy = deepCopyAssignment(assignment);
+                String domainValue = domainValues.get(i);
+                ArrayList<Pair<String>> neighbours = getAllNeighboringArcs(unassignedVariable);
+                boolean consistent = true;
+                for (Pair<String> neighbour : neighbours) {
+                    if (assignmentCopy.get(neighbour.x).size() == 1 && assignmentCopy.get(neighbour.x).get(0).equals(domainValue)) {
+                        consistent = false;
+                    }
+                }
+                if (consistent) {
+                    ArrayList<String> validValue = new ArrayList<String>();
+                    validValue.add(domainValue);
+                    assignmentCopy.put(unassignedVariable, validValue);
+                    if (inference(assignmentCopy, neighbours)) {
+                        VariablesToDomainsMapping result = backtrack(assignmentCopy);
+                        if (result != null) {
+                            return result;
+                        }
+                    }
+
+                }
+            }
+            return null;
+        }
+
+        /** Orders the elements in ascending order. No effect on sudoku puzzle, as the domain elements are
+         * already sorted **/
+        public ArrayList<String> orderDomainValues(String unassignedVariable, VariablesToDomainsMapping assignment) {
+            ArrayList<String> orderedDomain =  assignment.get(unassignedVariable);
+            Collections.sort(orderedDomain);
+            return orderedDomain;
         }
 
         /**
@@ -203,7 +238,12 @@ public class Assignment5 {
          * values has a length greater than one.
          */
         public String selectUnassignedVariable(VariablesToDomainsMapping assignment) {
-            // TODO: IMPLEMENT THIS
+            Iterator iterator = assignment.entrySet().iterator();
+            while (iterator.hasNext()) {
+                Map.Entry pairs = (Map.Entry)iterator.next();
+                ArrayList<String> legalValues = (ArrayList<String>)pairs.getValue();
+                if (legalValues.size() > 1) return (String) pairs.getKey();
+            }
             return "";
         }
 
@@ -214,8 +254,25 @@ public class Assignment5 {
          * arcs that should be visited.
          */
         public boolean inference(VariablesToDomainsMapping assignment, ArrayList<Pair<String>> queue) {
-            // TODO: IMPLEMENT THIS
-            return false;
+            for (int i = 0; i<queue.size();) {
+                Pair pair = queue.get(i);
+                queue.remove(i);
+                String x_i = (String) pair.x;
+                String x_j = (String) pair.y;
+                if (revise(assignment, x_i, x_j)) {
+                    ArrayList<String> domain = assignment.get(x_i);
+                    if (domain == null || domain.isEmpty()) {
+                        return false;
+                    }
+                    ArrayList<Pair<String>> neighbouringArcs = getAllNeighboringArcs(x_i);
+                    for (Pair neighbourPair : neighbouringArcs) {
+                        if (neighbourPair.x != x_j) {
+                            queue.add(new Pair(neighbourPair.x, neighbourPair.y));
+                        }
+                    }
+                }
+            }
+            return true;
         }
 
         /**
@@ -228,8 +285,26 @@ public class Assignment5 {
          * 'assignment'.
          */
         public boolean revise(VariablesToDomainsMapping assignment, String i, String j) {
-            // TODO: IMPLEMENT THIS
-            return false;
+            boolean revised = false;
+            ArrayList<String> domain_i = assignment.get(i);
+            ArrayList<String> domain_j = assignment.get(j);
+            DifferentValuesFilter differentValuesFilter = new DifferentValuesFilter();
+            for (int k = 0; k<domain_i.size(); k++) {
+                boolean constraintSatisfied = false;
+                for (String y : domain_j) {
+                    if (differentValuesFilter.filter(domain_i.get(k),y)) {
+                        constraintSatisfied = true;
+                        break;
+                    }
+                }
+                if (!constraintSatisfied) {
+                    domain_i.remove(k);
+                    k--;
+                    revised = true;
+                }
+            }
+            return revised;
+
         }
     }
 
