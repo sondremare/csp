@@ -200,34 +200,22 @@ public class Assignment5 {
             for (int i = 0; i<domainValues.size(); i++) {
                 VariablesToDomainsMapping assignmentCopy = deepCopyAssignment(assignment);
                 String domainValue = domainValues.get(i);
-                ArrayList<Pair<String>> neighbours = getAllNeighboringArcs(unassignedVariable);
-                boolean consistent = true;
-                for (Pair<String> neighbour : neighbours) {
-                    if (assignmentCopy.get(neighbour.x).size() == 1 && assignmentCopy.get(neighbour.x).get(0).equals(domainValue)) {
-                        consistent = false;
+                ArrayList<String> validValue = new ArrayList<String>();
+                validValue.add(domainValue);
+                assignmentCopy.put(unassignedVariable, validValue);
+                if (inference(assignmentCopy, getAllNeighboringArcs(unassignedVariable))) {
+                    VariablesToDomainsMapping result = backtrack(assignmentCopy);
+                    if (result != null) {
+                        return result;
                     }
-                }
-                if (consistent) {
-                    ArrayList<String> validValue = new ArrayList<String>();
-                    validValue.add(domainValue);
-                    assignmentCopy.put(unassignedVariable, validValue);
-                    if (inference(assignmentCopy, neighbours)) {
-                        VariablesToDomainsMapping result = backtrack(assignmentCopy);
-                        if (result != null) {
-                            return result;
-                        }
-                    }
-
                 }
             }
             return null;
         }
 
-        /** Orders the elements in ascending order. No effect on sudoku puzzle, as the domain elements are
-         * already sorted **/
         public ArrayList<String> orderDomainValues(String unassignedVariable, VariablesToDomainsMapping assignment) {
             ArrayList<String> orderedDomain =  assignment.get(unassignedVariable);
-            Collections.sort(orderedDomain);
+            Collections.sort(orderedDomain/*, Collections.reverseOrder()*/);
             return orderedDomain;
         }
 
